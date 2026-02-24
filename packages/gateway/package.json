@@ -1,0 +1,32 @@
+{
+	"name": "@mariozechner/pi-gateway",
+	"version": "0.54.2",
+	"description": "WebSocket control plane for autonomous AI agents",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"pi-gateway": "dist/main.js"
+	},
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "tsgo -p tsconfig.build.json",
+		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
+		"test": "vitest --run",
+		"prepublishOnly": "npm run clean && npm run build"
+	},
+	"dependencies": {
+		"@mariozechner/pi-agent-core": "^0.54.2",
+		"@mariozechner/pi-ai": "^0.54.2",
+		"chalk": "^5.6.2",
+		"ws": "^8.18.0"
+	},
+	"devDependencies": {
+		"@types/node": "^24.3.0",
+		"@types/ws": "^8.5.10",
+		"typescript": "^5.7.3",
+		"vitest": "^3.2.4"
+	},
+	"author": "Mario Zechner",
+	"license": "MIT"
+}
