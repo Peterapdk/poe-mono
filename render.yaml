@@ -1,0 +1,16 @@
+# Render Blueprint for OpenClaw Gateway
+services:
+  - type: web
+    name: openclaw-gateway
+    env: docker
+    dockerContext: .
+    dockerfilePath: packages/gateway/Dockerfile
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: PORT
+        value: 18789
