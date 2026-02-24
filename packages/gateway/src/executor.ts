@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import chalk from 'chalk';
-import { Agent } from '@mariozechner/pi-agent-core';
+import { Agent, type AgentEvent } from '@mariozechner/pi-agent-core';
 import { getModel } from '@mariozechner/pi-ai';
 import { GatewayMessage, AuthMessage, EventMessage, ToolCallMessage, ToolResultMessage } from './types.js';
 
@@ -8,69 +8,103 @@ import { GatewayMessage, AuthMessage, EventMessage, ToolCallMessage, ToolResultM
  * Executor connects to the Gateway as a 'node' and runs the AI agent loop.
  */
 export class Executor {
-	private ws: WebSocket;
+	private ws?: WebSocket;
 	private agent: Agent;
+	private heartbeatInterval?: NodeJS.Timeout;
 
-	constructor(url: string, token: string) {
-		this.ws = new WebSocket(url);
+	constructor(private url: string, private token: string) {
 		this.agent = new Agent({
 			initialState: {
 				model: getModel('anthropic', 'claude-3-5-sonnet-latest'),
-				systemPrompt: 'You are an autonomous AI agent. Execute tasks accurately. Use tools when necessary. If you need more information, ask the user.'
+				systemPrompt: 'You are an autonomous AI agent. Execute tasks accurately. Use tools when necessary.'
 			}
 		});
 
-		this.ws.on('open', () => this.authenticate(token));
-		this.ws.on('message', (data) => this.handleMessage(data));
+		this.connect();
 
-		this.agent.subscribe((event) => {
+		this.agent.subscribe((event: AgentEvent) => {
 			this.handleAgentEvent(event);
 		});
 	}
 
-	private authenticate(token: string) {
+	private connect() {
+		console.log(chalk.blue(`[Executor] Connecting to ${this.url}...`));
+		this.ws = new WebSocket(this.url);
+
+		this.ws.on('open', () => {
+			this.authenticate();
+			this.startHeartbeat();
+		});
+
+		this.ws.on('message', (data) => {
+			try {
+				const message = JSON.parse(data.toString()) as GatewayMessage;
+				this.handleMessage(message);
+			} catch (err) {
+				console.error(chalk.red('[Executor] Message parse error:'), err);
+			}
+		});
+
+		this.ws.on('close', () => {
+			console.log(chalk.yellow('[Executor] Connection lost. Retrying in 5s...'));
+			this.stopHeartbeat();
+			setTimeout(() => this.connect(), 5000);
+		});
+
+		this.ws.on('error', (err) => {
+			console.error(chalk.red('[Executor] WebSocket error:'), err);
+		});
+	}
+
+	private authenticate() {
 		const auth: AuthMessage = {
 			type: 'auth',
 			id: `auth-node-${Math.random().toString(36).substring(7)}`,
-			token,
+			token: this.token,
 			role: 'node'
 		};
 		this.send(auth);
 	}
 
-	private handleMessage(data: any) {
-		try {
-			const message = JSON.parse(data.toString()) as GatewayMessage;
-
-			switch (message.type) {
-				case 'event':
-					this.handleEvent(message as EventMessage);
-					break;
-				case 'tool_result':
-					this.handleToolResult(message as ToolResultMessage);
-					break;
-				case 'error':
-					console.error(chalk.red('Gateway error:'), (message as any).message);
-					break;
+	private startHeartbeat() {
+		this.heartbeatInterval = setInterval(() => {
+			if (this.ws?.readyState === WebSocket.OPEN) {
+				this.ws.ping();
 			}
-		} catch (err) {
-			console.error(chalk.red('Failed to handle gateway message:'), err);
+		}, 30000);
+	}
+
+	private stopHeartbeat() {
+		if (this.heartbeatInterval) {
+			clearInterval(this.heartbeatInterval);
+		}
+	}
+
+	private handleMessage(message: GatewayMessage) {
+		switch (message.type) {
+			case 'event':
+				this.handleEvent(message as EventMessage);
+				break;
+			case 'tool_result':
+				this.handleToolResult(message as ToolResultMessage);
+				break;
 		}
 	}
 
 	private async handleEvent(event: EventMessage) {
-		console.log(chalk.cyan(`[Executor] Processing event: ${event.text}`));
+		console.log(chalk.cyan(`[Executor] Event: ${event.text}`));
 		try {
 			await this.agent.prompt(event.text);
 		} catch (err) {
 			console.error(chalk.red('[Executor] Agent prompt error:'), err);
-			this.sendError(event.id, String(err));
 		}
 	}
 
 	private async handleToolResult(message: ToolResultMessage) {
-		console.log(chalk.green(`[Executor] Tool result received for ${message.id}`));
+		console.log(chalk.green(`[Executor] Tool result: ${message.id}`));
 		try {
+			// In a more complex setup, we would resume the specific agent loop.
+			// This is a simplified version that continues the current prompt.
 			this.agent.appendMessage({
 				role: 'toolResult',
 				toolCallId: message.id,
@@ -80,18 +114,17 @@ export class Executor {
 
 			await this.agent.continue();
 		} catch (err) {
-			console.error(chalk.red('[Executor] Error continuing agent after tool result:'), err);
-			this.sendError(message.id, String(err));
+			console.error(chalk.red('[Executor] Continuation error:'), err);
 		}
 	}
 
-	private handleAgentEvent(event: any) {
+	private handleAgentEvent(event: AgentEvent) {
 		switch (event.type) {
 			case 'message_update':
-			case 'message_end':
-				const text = event.message.content
-					.filter((c: any) => c.type === 'text')
-					.map((c: any) => c.text)
+			case 'message_end': {
+				const text = (event.message.content as any[])
+					.filter(c => c.type === 'text')
+					.map(c => c.text)
 					.join('');
 
 				if (text) {
@@ -103,9 +136,9 @@ export class Executor {
 					} as any);
 				}
 				break;
+			}
 
-			case 'tool_call':
-				console.log(chalk.yellow(`[Executor] Tool call: ${event.toolName}`));
+			case 'tool_execution_start':
 				this.send({
 					type: 'tool_call',
 					id: event.toolCallId,
@@ -115,22 +148,13 @@ export class Executor {
 				break;
 
 			case 'agent_end':
-				console.log(chalk.blue('[Executor] Agent turn finished'));
+				console.log(chalk.blue('[Executor] Agent idle'));
 				break;
 		}
 	}
 
-	private sendError(id: string, text: string) {
-		this.send({
-			type: 'error',
-			id,
-			text,
-			done: true
-		} as any);
-	}
-
 	private send(message: GatewayMessage) {
-		if (this.ws.readyState === WebSocket.OPEN) {
+		if (this.ws?.readyState === WebSocket.OPEN) {
 			this.ws.send(JSON.stringify(message));
 		}
 	}

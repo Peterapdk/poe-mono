@@ -12,5 +12,9 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
+      - key: GATEWAY_TOKEN
+        generateValue: true
       - key: PORT
         value: 18789
+      - key: NODE_ENV
+        value: production

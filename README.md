@@ -1,59 +1,84 @@
-# 🔱FORK
+# 🔱 OpenClaw / Pi-Mono
 
-**PI-MONO fork i.e. Poe-mono**
-
-
-
----
+> **Poe-mono**: A high-performance, autonomous AI agent system built on the `pi-mono` foundation.
 
 <p align="center">
-  <a href="https://shittycodingagent.ai">
-    <img src="https://shittycodingagent.ai/logo.svg" alt="pi logo" width="128">
-  </a>
-</p>
-<p align="center">
-  <a href="https://discord.com/invite/3cU7Bz4UPx"><img alt="Discord" src="https://img.shields.io/badge/discord-community-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
-  <a href="https://github.com/badlogic/pi-mono/actions/workflows/ci.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/badlogic/pi-mono/ci.yml?style=flat-square&branch=main" /></a>
-</p>
-<p align="center">
-  <a href="https://pi.dev">pi.dev</a> domain graciously donated by
-  <br /><br />
-  <a href="https://exe.dev"><img src="packages/coding-agent/docs/images/exy.png" alt="Exy mascot" width="48" /><br />exe.dev</a>
+  <img src="https://shittycodingagent.ai/logo.svg" alt="pi logo" width="128">
 </p>
 
-# Pi Monorepo
+This monorepo contains a complete suite of tools for building and deploying production-ready autonomous AI agents. It features a distributed architecture that connects platform channels (Slack, Discord) to isolated execution nodes via a central WebSocket Gateway.
 
-> **Looking for the pi coding agent?** See **[packages/coding-agent](packages/coding-agent)** for installation and usage.
+## 🌟 Key Features
 
-Tools for building AI agents and managing LLM deployments.
+- **Distributed Architecture**: Multi-platform support (Slack, Discord, WhatsApp) via the central **WebSocket Gateway**.
+- **Secure Sandboxing**: All tool execution happens in isolated **Docker** containers, protecting your host machine.
+- **Unified AI API**: Support for Claude, GPT, Gemini, and DeepSeek via a single interface.
+- **Persistent Memory**: Session history and long-term facts stored in **PostgreSQL (Supabase/Neon)**.
+- **Autonomous Tooling**: The agent can install its own tools, write code, and configure its own environment.
 
-## Packages
+## 📦 Packages
 
 | Package | Description |
 |---------|-------------|
-| **[@mariozechner/pi-ai](packages/ai)** | Unified multi-provider LLM API (OpenAI, Anthropic, Google, etc.) |
-| **[@mariozechner/pi-agent-core](packages/agent)** | Agent runtime with tool calling and state management |
-| **[@mariozechner/pi-coding-agent](packages/coding-agent)** | Interactive coding agent CLI |
-| **[@mariozechner/pi-mom](packages/mom)** | Slack bot that delegates messages to the pi coding agent |
-| **[@mariozechner/pi-tui](packages/tui)** | Terminal UI library with differential rendering |
-| **[@mariozechner/pi-web-ui](packages/web-ui)** | Web components for AI chat interfaces |
-| **[@mariozechner/pi-pods](packages/pods)** | CLI for managing vLLM deployments on GPU pods |
+| **[@mariozechner/pi-gateway](packages/gateway)** | **NEW**: WebSocket control plane for autonomous agent coordination. |
+| **[@mariozechner/pi-agent-core](packages/agent)** | Agent runtime with tool calling and state management. |
+| **[@mariozechner/pi-ai](packages/ai)** | Unified multi-provider LLM API. |
+| **[@mariozechner/pi-coding-agent](packages/coding-agent)** | Interactive coding agent CLI. |
+| **[@mariozechner/pi-mom](packages/mom)** | Slack bot implementation with Docker sandboxing. |
+| **[@mariozechner/pi-tui](packages/tui)** | Terminal UI library for rich interactive CLIs. |
+| **[@mariozechner/pi-web-ui](packages/web-ui)** | Web components for agent chat interfaces. |
 
-## Contributing
+## 🚀 Quick Start
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [AGENTS.md](AGENTS.md) for project-specific rules (for both humans and agents).
+### 1. Gateway Deployment (The Control Plane)
+The Gateway handles session routing and persistence.
 
-## Development
+```bash
+cd packages/gateway
+npm install
+npm run build
+# Configure environment variables (SUPABASE_URL, SUPABASE_KEY)
+node dist/main.js server
+```
+
+### 2. Node Setup (The Execution Environment)
+Nodes connect to the Gateway to execute tasks.
+
+```bash
+cd packages/gateway
+# Configure GATEWAY_URL and ANTHROPIC_API_KEY
+node dist/main.js executor
+```
+
+### 3. Database Setup
+Run the provided SQL in `packages/gateway/schema.sql` on your Supabase or Neon instance to enable persistence.
+
+## 🛠️ Development
 
 ```bash
 npm install          # Install all dependencies
 npm run build        # Build all packages
 npm run check        # Lint, format, and type check
-./test.sh            # Run tests (skips LLM-dependent tests without API keys)
-./pi-test.sh         # Run pi from sources (must be run from repo root)
+npm test             # Run unit tests across the monorepo
 ```
 
-> **Note:** `npm run check` requires `npm run build` to be run first. The web-ui package uses `tsc` which needs compiled `.d.ts` files from dependencies.
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    User((User)) --> Channel[Slack/Discord/WhatsApp]
+    Channel --> Gateway{WebSocket Gateway}
+    Gateway <--> DB[(Supabase/PostgreSQL)]
+    Gateway <--> Executor[Agent Executor Node]
+    Executor --> Sandbox[[Docker Sandbox]]
+    Sandbox --> Tools[Bash/Git/FS Tools]
+```
+
+## 📜 Documentation
+
+- [OpenClaw Implementation Plan](OPENCLAW_PLAN.md)
+- [Future Feature Roadmap](FEATURE_IDEAS.md)
+- [Slack Bot Setup Guide](packages/mom/docs/slack-bot-minimal-guide.md)
 
 ## License
 

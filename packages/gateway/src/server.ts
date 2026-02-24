@@ -7,23 +7,29 @@ interface Client {
 	ws: WebSocket;
 	role: 'channel' | 'node';
 	token: string;
-	sessionId?: string; // Associated session for this connection
+	sessionId?: string;
 }
 
+/**
+ * Gateway is the central control plane for routing messages between
+ * platform channels (Slack, Discord) and execution nodes (Agent Runners).
+ */
 export class Gateway {
 	private wss: WebSocketServer;
 	private clients: Map<WebSocket, Client> = new Map();
 	private storage: Storage;
+	private sharedSecret: string;
 
 	constructor(port: number = 18789) {
 		const supabaseUrl = process.env.SUPABASE_URL;
 		const supabaseKey = process.env.SUPABASE_KEY;
+		this.sharedSecret = process.env.GATEWAY_TOKEN || 'openclaw-default-secret';
 
 		if (supabaseUrl && supabaseKey) {
-			console.log(chalk.blue('[Gateway] Using Supabase for persistent storage'));
+			console.log(chalk.blue('[Gateway] Using Supabase persistence'));
 			this.storage = new SupabaseStorage(supabaseUrl, supabaseKey);
 		} else {
-			console.log(chalk.yellow('[Gateway] Using in-memory storage (non-persistent)'));
+			console.log(chalk.yellow('[Gateway] Using in-memory storage'));
 			this.storage = new MemoryStorage();
 		}
 
@@ -38,7 +44,7 @@ export class Gateway {
 				const message = JSON.parse(data.toString()) as GatewayMessage;
 				await this.handleMessage(ws, message);
 			} catch (err) {
-				console.error(chalk.red('[Gateway] Message processing error:'), err);
+				console.error(chalk.red('[Gateway] Message error:'), err);
 			}
 		});
 
@@ -52,37 +58,35 @@ export class Gateway {
 	}
 
 	private async handleMessage(ws: WebSocket, message: GatewayMessage) {
-		let client = this.clients.get(ws);
+		const client = this.clients.get(ws);
 
 		if (!client && message.type !== 'auth') {
-			ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized' }));
+			this.sendError(ws, 'Unauthorized. Please send auth message first.');
 			return;
 		}
 
-		// Update client's current session if provided
 		if (client && message.sessionId) {
 			client.sessionId = message.sessionId;
 		}
 
-		// Ensure session exists BEFORE saving message
-		if (message.sessionId && message.type === 'event') {
-			const event = message as any;
-			const session = await this.storage.getSession(message.sessionId);
-			if (!session) {
-				await this.storage.createSession({
-					id: message.sessionId,
-					channelId: event.channelId,
-					userId: event.userId,
-					history: []
-				});
-			}
-		}
-
-		// Persist message
+		// Persistence logic
 		if (message.sessionId) {
+			if (message.type === 'event') {
+				const event = message as any;
+				const session = await this.storage.getSession(message.sessionId);
+				if (!session) {
+					await this.storage.createSession({
+						id: message.sessionId,
+						channelId: event.channelId || 'unknown',
+						userId: event.userId || 'unknown',
+						history: []
+					});
+				}
+			}
 			await this.storage.saveMessage(message.sessionId, message);
 		}
 
+		// Routing logic
 		switch (message.type) {
 			case 'auth':
 				this.authenticate(ws, message as AuthMessage);
@@ -100,11 +104,18 @@ export class Gateway {
 				this.routeToSession('channel', message.sessionId!, message);
 				break;
 			default:
-				console.warn(chalk.gray(`[Gateway] Unhandled: ${message.type}`));
+				console.warn(chalk.gray(`[Gateway] Ignored: ${message.type}`));
 		}
 	}
 
 	private authenticate(ws: WebSocket, message: AuthMessage) {
+		if (message.token !== this.sharedSecret) {
+			console.log(chalk.red(`[Gateway] Auth failed for ${message.role}`));
+			this.sendError(ws, 'Invalid token');
+			ws.close();
+			return;
+		}
+
 		this.clients.set(ws, {
 			ws,
 			role: message.role,
@@ -114,26 +125,26 @@ export class Gateway {
 		ws.send(JSON.stringify({ type: 'auth', status: 'ok', id: message.id }));
 	}
 
-	/**
-	 * Routes a message to all clients of a specific role that are interested in a session.
-	 * In a real-world scenario, you'd probably have 1 Node per Session.
-	 */
 	private routeToSession(role: 'channel' | 'node', sessionId: string, message: GatewayMessage) {
 		const payload = JSON.stringify(message);
 		let delivered = false;
+
 		for (const client of this.clients.values()) {
 			if (client.role === role && client.ws.readyState === WebSocket.OPEN) {
-				// If client has specified a session, only send if it matches.
-				// Otherwise, if it's a new Node or Channel looking for work, broadcast (simplified).
 				if (!client.sessionId || client.sessionId === sessionId) {
 					client.ws.send(payload);
 					delivered = true;
 				}
 			}
 		}
+
 		if (!delivered) {
 			console.warn(chalk.yellow(`[Gateway] No ${role} available for session ${sessionId}`));
 		}
+	}
+
+	private sendError(ws: WebSocket, message: string) {
+		ws.send(JSON.stringify({ type: 'error', message }));
 	}
 
 	public stop() {
