@@ -14,7 +14,7 @@ function timestamp(): string {
 	return `[${hh}:${mm}:${ss}]`;
 }
 
-function formatContext(ctx: LogContext): string {
+export function formatContext(ctx: LogContext): string {
 	// DMs: [DM:username]
 	// Channels: [#channel-name:username] or [C16HET4EQ:username] if no name
 	if (ctx.channelId.startsWith("D")) {
@@ -25,12 +25,12 @@ function formatContext(ctx: LogContext): string {
 	return `[${channel.startsWith("#") ? channel : `#${channel}`}:${user}]`;
 }
 
-function truncate(text: string, maxLen: number): string {
+export function truncate(text: string, maxLen: number): string {
 	if (text.length <= maxLen) return text;
 	return `${text.substring(0, maxLen)}\n(truncated at ${maxLen} chars)`;
 }
 
-function formatToolArgs(args: Record<string, unknown>): string {
+export function formatToolArgs(args: Record<string, unknown>): string {
 	const lines: string[] = [];
 
 	for (const [key, value] of Object.entries(args)) {
