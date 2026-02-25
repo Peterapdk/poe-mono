@@ -90,6 +90,7 @@ import { appKey, appKeyHint, editorKey, keyHint, rawKeyHint } from "./components
 import { LoginDialogComponent } from "./components/login-dialog.js";
 import { ModelSelectorComponent } from "./components/model-selector.js";
 import { OAuthSelectorComponent } from "./components/oauth-selector.js";
+import { OnboardingComponent } from "./components/onboarding.js";
 import { ScopedModelsSelectorComponent } from "./components/scoped-models-selector.js";
 import { SessionSelectorComponent } from "./components/session-selector.js";
 import { SettingsSelectorComponent } from "./components/settings-selector.js";
@@ -1933,6 +1934,12 @@ export class InteractiveMode {
 				this.editor.setText("");
 				return;
 			}
+			if (text === "/onboard") {
+				this.showOnboarding();
+				this.editor.setText("");
+				return;
+			}
+
 			if (text === "/login") {
 				this.showOAuthSelector("login");
 				this.editor.setText("");
@@ -3592,6 +3599,28 @@ export class InteractiveMode {
 		this.chatContainer.clear();
 		this.renderInitialMessages();
 		this.showStatus("Resumed session");
+	}
+
+	private showOnboarding(): void {
+		this.showSelector((done) => {
+			const onboard = new OnboardingComponent(
+				this.ui,
+				this.session.modelRegistry.authStorage,
+				this.session.modelRegistry,
+				this.settingsManager,
+				async () => {
+					done();
+					await this.updateAvailableProviderCount();
+					this.ui.requestRender();
+				},
+				() => {
+					done();
+					this.ui.requestRender();
+				},
+				() => this.ui.requestRender(),
+			);
+			return { component: onboard, focus: onboard };
+		});
 	}
 
 	private async showOAuthSelector(mode: "login" | "logout"): Promise<void> {

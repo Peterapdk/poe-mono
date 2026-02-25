@@ -7,6 +7,7 @@
  * - GitHub Copilot
  * - Google Cloud Code Assist (Gemini CLI)
  * - Antigravity (Gemini 3, Claude, GPT-OSS via Google Cloud)
+ * - Poe (p-b cookie)
  */
 
 // Set up HTTP proxy for fetch() calls (respects HTTP_PROXY, HTTPS_PROXY env vars)
@@ -28,6 +29,8 @@ export { antigravityOAuthProvider, loginAntigravity, refreshAntigravityToken } f
 export { geminiCliOAuthProvider, loginGeminiCli, refreshGoogleCloudToken } from "./google-gemini-cli.js";
 // OpenAI Codex (ChatGPT OAuth)
 export { loginOpenAICodex, openaiCodexOAuthProvider, refreshOpenAICodexToken } from "./openai-codex.js";
+// Poe
+export { poeOAuthProvider } from "./poe.js";
 
 export * from "./types.js";
 
@@ -40,6 +43,7 @@ import { githubCopilotOAuthProvider } from "./github-copilot.js";
 import { antigravityOAuthProvider } from "./google-antigravity.js";
 import { geminiCliOAuthProvider } from "./google-gemini-cli.js";
 import { openaiCodexOAuthProvider } from "./openai-codex.js";
+import { poeOAuthProvider } from "./poe.js";
 import type { OAuthCredentials, OAuthProviderId, OAuthProviderInfo, OAuthProviderInterface } from "./types.js";
 
 const oauthProviderRegistry = new Map<string, OAuthProviderInterface>([
@@ -48,6 +52,7 @@ const oauthProviderRegistry = new Map<string, OAuthProviderInterface>([
 	[geminiCliOAuthProvider.id, geminiCliOAuthProvider],
 	[antigravityOAuthProvider.id, antigravityOAuthProvider],
 	[openaiCodexOAuthProvider.id, openaiCodexOAuthProvider],
+	[poeOAuthProvider.id, poeOAuthProvider],
 ]);
 
 /**

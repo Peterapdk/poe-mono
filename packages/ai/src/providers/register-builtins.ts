@@ -8,6 +8,7 @@ import { streamGoogleVertex, streamSimpleGoogleVertex } from "./google-vertex.js
 import { streamOpenAICodexResponses, streamSimpleOpenAICodexResponses } from "./openai-codex-responses.js";
 import { streamOpenAICompletions, streamSimpleOpenAICompletions } from "./openai-completions.js";
 import { streamOpenAIResponses, streamSimpleOpenAIResponses } from "./openai-responses.js";
+import { streamPoe, streamSimplePoe } from "./poe.js";
 
 export function registerBuiltInApiProviders(): void {
 	registerApiProvider({
@@ -62,6 +63,12 @@ export function registerBuiltInApiProviders(): void {
 		api: "bedrock-converse-stream",
 		stream: streamBedrock,
 		streamSimple: streamSimpleBedrock,
+	});
+
+	registerApiProvider({
+		api: "poe-chat",
+		stream: streamPoe,
+		streamSimple: streamSimplePoe,
 	});
 }
 

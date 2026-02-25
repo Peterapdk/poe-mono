@@ -1305,6 +1305,48 @@ async function generateModels() {
 		}
 	}
 
+	// Poe models
+	const POE_BASE_URL = "https://poe.com/api/v1";
+	const poeModels: Model<"poe-chat">[] = [
+		{
+			id: "claude-3-opus",
+			name: "Claude 3 Opus (Poe)",
+			api: "poe-chat",
+			provider: "poe",
+			baseUrl: POE_BASE_URL,
+			reasoning: true,
+			input: ["text", "image"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 200000,
+			maxTokens: 4096,
+		},
+		{
+			id: "claude-3-haiku",
+			name: "Claude 3 Haiku (Poe)",
+			api: "poe-chat",
+			provider: "poe",
+			baseUrl: POE_BASE_URL,
+			reasoning: false,
+			input: ["text", "image"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 200000,
+			maxTokens: 4096,
+		},
+		{
+			id: "gpt-4o",
+			name: "GPT-4o (Poe)",
+			api: "poe-chat",
+			provider: "poe",
+			baseUrl: POE_BASE_URL,
+			reasoning: false,
+			input: ["text", "image"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 128000,
+			maxTokens: 4096,
+		},
+	];
+	allModels.push(...poeModels);
+
 	const azureOpenAiModels: Model<Api>[] = allModels
 		.filter((model) => model.provider === "openai" && model.api === "openai-responses")
 		.map((model) => ({

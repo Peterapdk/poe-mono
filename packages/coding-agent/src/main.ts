@@ -12,6 +12,7 @@ import { type Args, parseArgs, printHelp } from "./cli/args.js";
 import { selectConfig } from "./cli/config-selector.js";
 import { processFileArguments } from "./cli/file-processor.js";
 import { listModels } from "./cli/list-models.js";
+import { startOnboarding } from "./cli/onboard.js";
 import { selectSession } from "./cli/session-picker.js";
 import { APP_NAME, getAgentDir, getModelsPath, VERSION } from "./config.js";
 import { AuthStorage } from "./core/auth-storage.js";
@@ -511,6 +512,28 @@ function buildSessionOptions(
 	return { options, cliThinkingFromModel };
 }
 
+async function handleOnboardCommand(args: string[]): Promise<boolean> {
+	if (args[0] !== "onboard") {
+		return false;
+	}
+
+	const cwd = process.cwd();
+	const agentDir = getAgentDir();
+	const settingsManager = SettingsManager.create(cwd, agentDir);
+	const authStorage = AuthStorage.create();
+	const modelRegistry = new ModelRegistry(authStorage, getModelsPath());
+
+	await startOnboarding({
+		settingsManager,
+		authStorage,
+		modelRegistry,
+		cwd,
+		agentDir,
+	});
+
+	process.exit(0);
+}
+
 async function handleConfigCommand(args: string[]): Promise<boolean> {
 	if (args[0] !== "config") {
 		return false;
@@ -539,6 +562,10 @@ export async function main(args: string[]) {
 		return;
 	}
 
+	if (await handleOnboardCommand(args)) {
+		return;
+	}
+
 	if (await handleConfigCommand(args)) {
 		return;
 	}
@@ -556,6 +583,18 @@ export async function main(args: string[]) {
 	reportSettingsErrors(settingsManager, "startup");
 	const authStorage = AuthStorage.create();
 	const modelRegistry = new ModelRegistry(authStorage, getModelsPath());
+	const availableModels = await modelRegistry.getAvailable();
+	const isInitialInteractive = !firstPass.print && firstPass.mode === undefined && firstPass.messages.length === 0;
+	if (availableModels.length === 0 && isInitialInteractive && !firstPass.help && !firstPass.version) {
+		await startOnboarding({
+			settingsManager,
+			authStorage,
+			modelRegistry,
+			cwd,
+			agentDir,
+		});
+		modelRegistry.refresh();
+	}
 
 	const resourceLoader = new DefaultResourceLoader({
 		cwd,
