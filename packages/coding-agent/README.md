@@ -60,6 +60,12 @@ Pi runs in four modes: interactive, print or JSON, RPC for process integration, 
 npm install -g @mariozechner/pi-coding-agent
 ```
 
+Or use the interactive onboarding:
+
+```bash
+pi onboard
+```
+
 Authenticate with an API key:
 
 ```bash
@@ -76,7 +82,7 @@ pi
 
 Then just talk to pi. By default, pi gives the model four tools: `read`, `write`, `edit`, and `bash`. The model uses these to fulfill your requests. Add capabilities via [skills](#skills), [prompt templates](#prompt-templates), [extensions](#extensions), or [pi packages](#pi-packages).
 
-**Platform notes:** [Windows](docs/windows.md) | [Termux (Android)](docs/termux.md) | [Terminal setup](docs/terminal-setup.md) | [Shell aliases](docs/shell-aliases.md)
+**Platform notes:** [Windows](docs/windows.md) | [Termux (Android)](docs/termux.md) | [Terminal setup](docs/terminal-setup.md) | [Shell aliases](docs/shell-aliases.md) | [Onboarding](docs/onboarding.md)
 
 ---
 
@@ -90,6 +96,7 @@ For each built-in provider, pi maintains a list of tool-capable models, updated 
 - GitHub Copilot
 - Google Gemini CLI
 - Google Antigravity
+- Poe (requires session cookie)
 
 **API keys:**
 - Anthropic
@@ -97,6 +104,7 @@ For each built-in provider, pi maintains a list of tool-capable models, updated 
 - Azure OpenAI
 - Google Gemini
 - Google Vertex
+- Poe (p-b cookie)
 - Amazon Bedrock
 - Mistral
 - Groq
@@ -351,6 +359,7 @@ pi remove npm:@foo/pi-tools
 pi list
 pi update                               # skips pinned packages
 pi config                               # enable/disable extensions, skills, prompts, themes
+pi onboard                  # Open interactive onboarding
 ```
 
 Packages install to `~/.pi/agent/git/` (git) or global npm. Use `-l` for project-local installs (`.pi/git/`, `.pi/npm/`).
@@ -440,6 +449,7 @@ pi remove <source> [-l]     # Remove package
 pi update [source]          # Update packages (skips pinned)
 pi list                     # List installed packages
 pi config                   # Enable/disable package resources
+pi onboard                  # Open interactive onboarding
 ```
 
 ### Modes

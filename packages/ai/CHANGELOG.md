@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.54.3] - 2026-02-25
+### Added
+- Added Poe model provider with `p-b` cookie authentication.
 
 ## [0.54.2] - 2026-02-23
 

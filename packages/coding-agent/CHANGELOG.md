@@ -1,6 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.54.3] - 2026-02-25
+### Added
+- Added interactive onboarding flow to guide users through initial provider setup.
+- Added `pi onboard` CLI command and `/onboard` interactive command.
 
 ## [0.54.2] - 2026-02-23
 

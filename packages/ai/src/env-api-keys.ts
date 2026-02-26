@@ -108,6 +108,7 @@ export function getEnvApiKey(provider: any): string | undefined {
 		huggingface: "HF_TOKEN",
 		opencode: "OPENCODE_API_KEY",
 		"kimi-coding": "KIMI_API_KEY",
+		poe: "POE_P_B",
 	};
 
 	const envVar = envMap[provider];
