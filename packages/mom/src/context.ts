@@ -177,6 +177,9 @@ const DEFAULT_RETRY: MomRetrySettings = {
 	baseDelayMs: 2000,
 };
 
+const DEFAULT_PROVIDER = "anthropic";
+const DEFAULT_MODEL = "claude-sonnet-4-5";
+
 /**
  * Settings manager for mom.
  * Stores settings in the workspace root directory.
@@ -187,6 +190,10 @@ export class MomSettingsManager {
 
 	constructor(workspaceDir: string) {
 		this.settingsPath = join(workspaceDir, "settings.json");
+		this.settings = this.load();
+	}
+
+	refresh(): void {
 		this.settings = this.load();
 	}
 
@@ -247,12 +254,12 @@ export class MomSettingsManager {
 		this.save();
 	}
 
-	getDefaultModel(): string | undefined {
-		return this.settings.defaultModel;
+	getDefaultModel(): string {
+		return this.settings.defaultModel || DEFAULT_MODEL;
 	}
 
-	getDefaultProvider(): string | undefined {
-		return this.settings.defaultProvider;
+	getDefaultProvider(): string {
+		return this.settings.defaultProvider || DEFAULT_PROVIDER;
 	}
 
 	setDefaultModelAndProvider(provider: string, modelId: string): void {

@@ -16,15 +16,13 @@ import { existsSync, readFileSync } from "fs";
 import { mkdir, writeFile } from "fs/promises";
 import { homedir } from "os";
 import { join } from "path";
+import { type ThinkingLevel } from "@mariozechner/pi-agent-core";
 import { MomSettingsManager, syncLogToSessionManager } from "./context.js";
 import * as log from "./log.js";
 import { createExecutor, type SandboxConfig } from "./sandbox.js";
 import type { ChannelInfo, SlackContext, UserInfo } from "./slack.js";
 import type { ChannelStore } from "./store.js";
 import { createMomTools, setUploadFunction } from "./tools/index.js";
-
-// Hardcoded model for now - TODO: make configurable (issue #63)
-const model = getModel("anthropic", "claude-sonnet-4-5");
 
 export interface PendingMessage {
 	userName: string;
@@ -42,12 +40,12 @@ export interface AgentRunner {
 	abort(): void;
 }
 
-async function getAnthropicApiKey(authStorage: AuthStorage): Promise<string> {
-	const key = await authStorage.getApiKey("anthropic");
+async function getApiKey(authStorage: AuthStorage, provider: string): Promise<string> {
+	const key = await authStorage.getApiKey(provider);
 	if (!key) {
 		throw new Error(
-			"No API key found for anthropic.\n\n" +
-				"Set an API key environment variable, or use /login with Anthropic and link to auth.json from " +
+			`No API key found for ${provider}.\n\n` +
+				`Set an API key environment variable, or use /login with ${provider} and link to auth.json from ` +
 				join(homedir(), ".pi", "mom", "auth.json"),
 		);
 	}
@@ -432,15 +430,20 @@ function createRunner(sandboxConfig: SandboxConfig, channelId: string, channelDi
 	const modelRegistry = new ModelRegistry(authStorage);
 
 	// Create agent
+	const provider = settingsManager.getDefaultProvider();
+	const modelId = settingsManager.getDefaultModel();
+	const initialModel = modelRegistry.find(provider, modelId) || getModel(provider as any, modelId);
+	const initialThinkingLevel = settingsManager.getDefaultThinkingLevel() as ThinkingLevel;
+
 	const agent = new Agent({
 		initialState: {
 			systemPrompt,
-			model,
-			thinkingLevel: "off",
+			model: initialModel,
+			thinkingLevel: initialThinkingLevel,
 			tools,
 		},
 		convertToLlm,
-		getApiKey: async () => getAnthropicApiKey(authStorage),
+		getApiKey: async (p) => getApiKey(authStorage, p),
 	});
 
 	// Load existing messages
@@ -644,6 +647,15 @@ function createRunner(sandboxConfig: SandboxConfig, channelId: string, channelDi
 			_store: ChannelStore,
 			_pendingMessages?: PendingMessage[],
 		): Promise<{ stopReason: string; errorMessage?: string }> {
+			// Reload settings and update agent config
+			settingsManager.refresh();
+			const provider = settingsManager.getDefaultProvider();
+			const modelId = settingsManager.getDefaultModel();
+			const currentModel = modelRegistry.find(provider, modelId) || getModel(provider as any, modelId);
+			const currentThinkingLevel = settingsManager.getDefaultThinkingLevel() as ThinkingLevel;
+			agent.setModel(currentModel);
+			agent.setThinkingLevel(currentThinkingLevel);
+
 			// Ensure channel directory exists
 			await mkdir(channelDir, { recursive: true });
 
@@ -841,7 +853,7 @@ function createRunner(sandboxConfig: SandboxConfig, channelId: string, channelDi
 						lastAssistantMessage.usage.cacheRead +
 						lastAssistantMessage.usage.cacheWrite
 					: 0;
-				const contextWindow = model.contextWindow || 200000;
+				const contextWindow = agent.state.model.contextWindow || 200000;
 
 				const summary = log.logUsageSummary(runState.logCtx!, runState.totalUsage, contextTokens, contextWindow);
 				runState.queue.enqueue(() => ctx.respondInThread(summary), "usage summary");
