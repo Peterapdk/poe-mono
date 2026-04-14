@@ -44,7 +44,7 @@ import { antigravityOAuthProvider } from "./google-antigravity.js";
 import { geminiCliOAuthProvider } from "./google-gemini-cli.js";
 import { openaiCodexOAuthProvider } from "./openai-codex.js";
 import { poeOAuthProvider } from "./poe.js";
-import type { OAuthCredentials, OAuthProviderId, OAuthProviderInfo, OAuthProviderInterface } from "./types.js";
+import type { OAuthCredentials, OAuthProviderId, OAuthProviderInterface } from "./types.js";
 
 const oauthProviderRegistry = new Map<string, OAuthProviderInterface>([
 	[anthropicOAuthProvider.id, anthropicOAuthProvider],
@@ -74,17 +74,6 @@ export function registerOAuthProvider(provider: OAuthProviderInterface): void {
  */
 export function getOAuthProviders(): OAuthProviderInterface[] {
 	return Array.from(oauthProviderRegistry.values());
-}
-
-/**
- * @deprecated Use getOAuthProviders() which returns OAuthProviderInterface[]
- */
-export function getOAuthProviderInfoList(): OAuthProviderInfo[] {
-	return getOAuthProviders().map((p) => ({
-		id: p.id,
-		name: p.name,
-		available: true,
-	}));
 }
 
 // ============================================================================

@@ -14,7 +14,7 @@ import {
 	type ImageContent,
 	type Message,
 	type Model,
-	type OAuthProvider,
+	type OAuthProviderId,
 } from "@mariozechner/pi-ai";
 import type {
 	AutocompleteItem,
@@ -3703,7 +3703,7 @@ export class InteractiveMode {
 		};
 
 		try {
-			await this.session.modelRegistry.authStorage.login(providerId as OAuthProvider, {
+			await this.session.modelRegistry.authStorage.login(providerId as OAuthProviderId, {
 				onAuth: (info: { url: string; instructions?: string }) => {
 					dialog.showAuth(info.url, info.instructions);
 
